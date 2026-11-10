@@ -1,0 +1,9 @@
+node_modules/
+third-party/
+dist/
+
+# Never commit captured Patreon data (API dumps, HAR files, cookies) - they contain signed media tokens / session info.
+example-response*.json
+*.har
+cookies*.txt
+.env

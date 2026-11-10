@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https:; worker-src 'self' blob:;" />
+  <meta name="color-scheme" content="dark" />
+  <title>Patreon Media Saver</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ===================================================== LOGIN -->
+  <div id="login-view" class="login-view" hidden>
+    <div class="login-card">
+      <img class="logo" src="../assets/icon.svg" alt="" width="88" height="88" />
+      <h1>Patreon Media Saver</h1>
+      <p class="muted">Sign in to Patreon to see your memberships. A normal Patreon login window opens —
+        enter your email/password and the code Patreon emails you. Your session is stored locally in this app only.</p>
+      <button id="btn-login" class="btn primary big">Log in with Patreon</button>
+      <p id="login-error" class="error" hidden></p>
+      <details class="cookie-import">
+        <summary>Alternative: paste cookies from your browser</summary>
+        <p class="muted small">In your browser DevTools → Network, right-click any <code>patreon.com/api/…</code> request →
+          Copy → Copy as fetch, and paste just the value of the <code>"cookie"</code> header (must contain <code>session_id=…</code>).</p>
+        <textarea id="cookie-input" rows="5" placeholder="patreon_device_id=…; session_id=…; …"></textarea>
+        <button id="btn-import-cookies" class="btn">Import cookies</button>
+      </details>
+    </div>
+  </div>
+
+  <!-- ===================================================== APP -->
+  <div id="app-view" class="app-view" hidden>
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../assets/icon.svg" alt="" width="22" height="22" />
+        <span>Patreon Media Saver</span>
+      </div>
+      <div class="me">
+        <img id="me-avatar" alt="" />
+        <div>
+          <div id="me-name" class="me-name"></div>
+          <div class="muted small">Memberships</div>
+        </div>
+      </div>
+      <nav id="campaign-list" class="campaign-list" aria-label="Memberships"></nav>
+      <div class="sidebar-footer">
+        <div id="tools-banner" class="tools-banner" hidden></div>
+        <button id="btn-downloads" class="btn side-btn">⬇ Downloads <span id="dl-badge" class="badge" hidden>0</span></button>
+        <button id="btn-settings" class="btn side-btn">⚙ Settings</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="empty-state" class="empty-state">
+        <p>Select a creator on the left.</p>
+      </div>
+
+      <section id="campaign-view" class="campaign-view" hidden>
+        <header class="campaign-header">
+          <img id="c-avatar" class="c-avatar" alt="" />
+          <div class="c-info">
+            <h2 id="c-name"></h2>
+            <div id="c-sub" class="muted small"></div>
+            <div class="folder-row">
+              <span class="muted small">Saving to</span>
+              <code id="c-folder" class="folder"></code>
+              <button id="btn-folder-change" class="btn small">Change…</button>
+              <button id="btn-folder-reset" class="btn small" hidden>Use default</button>
+              <button id="btn-folder-open" class="btn small">Open</button>
+            </div>
+          </div>
+          <div class="c-actions">
+            <button id="btn-open-patreon" class="btn small">Open on Patreon ↗</button>
+            <button id="btn-refresh" class="btn small">⟳ Refresh</button>
+          </div>
+        </header>
+
+        <div class="toolbar">
+          <input id="search" type="search" placeholder="Search titles…" aria-label="Search titles" />
+          <div class="seg" role="radiogroup" aria-label="Filter by type">
+            <button data-filter="all" class="active" role="radio" aria-checked="true">All</button>
+            <button data-filter="video" role="radio" aria-checked="false">Video</button>
+            <button data-filter="audio" role="radio" aria-checked="false">Audio</button>
+            <button data-filter="other" role="radio" aria-checked="false">Other</button>
+          </div>
+          <label class="chk"><input id="opt-group" type="checkbox" /> Group video+audio episodes</label>
+          <label class="chk"><input id="opt-hide-dl" type="checkbox" /> Hide downloaded</label>
+          <span class="spacer"></span>
+          <span id="load-status" class="muted small"></span>
+          <button id="btn-load-more" class="btn small">Load more</button>
+          <button id="btn-load-all" class="btn small">Load all</button>
+        </div>
+
+        <div class="selbar">
+          <label class="chk"><input id="sel-all" type="checkbox" /> Select all shown</label>
+          <span id="sel-count" class="muted small">0 selected</span>
+          <span class="spacer"></span>
+          <span class="muted small">Download selected:</span>
+          <button id="btn-dl-sel-video" class="btn small" disabled>🎬 Video</button>
+          <button id="btn-dl-sel-audio" class="btn small" disabled>🎧 Audio</button>
+          <button id="btn-dl-sel-both" class="btn small primary" disabled>Both</button>
+        </div>
+
+        <div id="post-list" class="post-list" role="list"></div>
+        <div id="list-footer" class="list-footer"></div>
+      </section>
+    </main>
+
+    <!-- Downloads drawer -->
+    <aside id="downloads-drawer" class="drawer" aria-label="Downloads" hidden>
+      <div class="drawer-head">
+        <h3>Downloads</h3>
+        <span class="spacer"></span>
+        <button id="btn-dl-clear" class="btn small">Clear finished</button>
+        <button id="btn-dl-close" class="btn small" aria-label="Close downloads">✕</button>
+      </div>
+      <div id="dl-list" class="dl-list"></div>
+    </aside>
+  </div>
+
+  <!-- Persistent audio player -->
+  <div id="audio-bar" class="audio-bar" hidden>
+    <img id="audio-thumb" alt="" />
+    <div class="audio-title"><div id="audio-title"></div><div id="audio-sub" class="muted small"></div></div>
+    <audio id="audio-el" controls preload="metadata"></audio>
+    <button id="audio-close" class="btn small" aria-label="Close player">✕</button>
+  </div>
+
+  <!-- Post viewer -->
+  <dialog id="post-dialog" class="post-dialog" closedby="any" aria-labelledby="pd-title">
+    <div class="pd-head">
+      <h3 id="pd-title"></h3>
+      <button class="btn small" data-close aria-label="Close">✕</button>
+    </div>
+    <div id="pd-media" class="pd-media"></div>
+    <div class="pd-meta">
+      <span id="pd-date" class="muted small"></span>
+      <span class="spacer"></span>
+      <div id="pd-actions" class="pd-actions"></div>
+    </div>
+    <div id="pd-content" class="pd-content"></div>
+    <div id="pd-files" class="pd-files"></div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settings-dialog" class="settings-dialog" closedby="any" aria-labelledby="st-title">
+    <form id="settings-form" method="dialog">
+      <div class="pd-head">
+        <h3 id="st-title">Settings</h3>
+        <button class="btn small" value="cancel" formnovalidate aria-label="Close">✕</button>
+      </div>
+
+      <fieldset>
+        <legend>Download location</legend>
+        <label class="field">Global download folder
+          <div class="row">
+            <input id="st-dir" name="downloadDir" type="text" required />
+            <button type="button" id="st-dir-browse" class="btn small">Browse…</button>
+          </div>
+        </label>
+        <label class="chk"><input id="st-subfolder" name="perCreatorSubfolder" type="checkbox" />
+          Put each creator in its own subfolder (e.g. <code>F:\PODCASTS\chapotraphouse</code>)</label>
+        <p class="muted small">You can also set a custom folder per creator from the creator's page (“Change…”).</p>
+        <label class="field">File name template
+          <input id="st-template" name="filenameTemplate" type="text" />
+          <span class="muted small">Tokens: <code>{title}</code> <code>{date}</code> <code>{campaign}</code> <code>{id}</code> <code>{type}</code>. Colons become “ -”.</span>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Downloads</legend>
+        <label class="field inline">Video quality
+          <select id="st-quality" name="videoQuality">
+            <option value="best">Best available</option>
+            <option value="1080">≤ 1080p</option>
+            <option value="720">≤ 720p</option>
+            <option value="480">≤ 480p</option>
+            <option value="360">≤ 360p</option>
+          </select>
+        </label>
+        <label class="field inline">Parallel downloads
+          <input id="st-concurrency" name="concurrency" type="number" min="1" max="8" />
+        </label>
+        <label class="chk"><input id="st-audio-fallback" name="audioFromVideoFallback" type="checkbox" />
+          If there is no audio post, extract MP3 audio from the video</label>
+        <label class="chk"><input id="st-embed-subs" name="embedSubtitles" type="checkbox" /> Embed transcript subtitles into downloaded videos (soft track, via ffmpeg)</label>
+        <label class="chk"><input id="st-subs" name="saveSubtitles" type="checkbox" /> Also save subtitles (.vtt) next to videos</label>
+        <label class="chk"><input id="st-thumb" name="saveThumbnail" type="checkbox" /> Save thumbnail image next to media</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Tools (third-party)</legend>
+        <div class="row"><code id="st-tools-dir" class="folder"></code><button type="button" id="st-tools-open" class="btn small">Open</button></div>
+        <div class="tool-row"><b>yt-dlp</b> <span id="st-yt"></span>
+          <button type="button" id="st-yt-update" class="btn small">Update</button></div>
+        <div class="tool-row"><b>ffmpeg</b> <span id="st-ff"></span>
+          <button type="button" id="st-ff-reinstall" class="btn small">Re-download</button></div>
+        <div id="st-tools-progress" class="muted small"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Account</legend>
+        <div class="row"><span id="st-account"></span><span class="spacer"></span>
+          <button type="button" id="st-logout" class="btn small danger">Log out</button></div>
+      </fieldset>
+
+      <div class="dialog-actions">
+        <button value="cancel" formnovalidate class="btn">Cancel</button>
+        <button id="st-save" value="save" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="../../node_modules/hls.js/dist/hls.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

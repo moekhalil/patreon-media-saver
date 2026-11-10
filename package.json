@@ -1,0 +1,36 @@
+{
+  "name": "patreon-media-saver",
+  "productName": "Patreon Media Saver",
+  "version": "1.0.0",
+  "description": "Browse your Patreon memberships, watch/listen to posts, and download video/audio to local folders.",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "icons": "electron scripts/make-icons.js",
+    "dist": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "hls.js": "^1.7.4"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "local.patreon-media-saver",
+    "productName": "Patreon Media Saver",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "node_modules/hls.js/dist/hls.min.js"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    }
+  }
+}
