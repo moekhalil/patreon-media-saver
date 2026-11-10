@@ -3,6 +3,15 @@
   "productName": "Patreon Media Saver",
   "version": "1.0.0",
   "description": "Browse your Patreon memberships, watch/listen to posts, and download video/audio to local folders.",
+  "author": {
+    "name": "Moe Khalil",
+    "email": "me@mkhalil.org"
+  },
+  "homepage": "https://github.com/moekhalil/patreon-media-saver",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moekhalil/patreon-media-saver.git"
+  },
   "main": "src/main/main.js",
   "private": true,
   "scripts": {
